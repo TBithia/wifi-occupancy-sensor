@@ -1,1 +1,1 @@
-# wifi-presence
+# wifi-occupancy-sensor
