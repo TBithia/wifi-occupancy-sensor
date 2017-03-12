@@ -1,11 +1,11 @@
 import unittest
-import wifi_presence
+import wifi_occupancy_sensor
 from flask import Flask
 
-class wifi_presence_tests(unittest.TestCase):
+class wifi_occupancy_sensor_tests(unittest.TestCase):
 	def setUp(self):
 		app = Flask(__name__)
-		app.register_blueprint(wifi_presence.wifi_presence)
+		app.register_blueprint(wifi_occupancy_sensor.wifi_occupancy_sensor)
 		self.app = app.test_client()
 
 	def test_mac_match(self):
