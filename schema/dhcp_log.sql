@@ -6,9 +6,9 @@ Items in lease table
 -Host name, if supplied
 */
 
-create table dhcp_log as(
+create table dhcp_log (
 	expir_ts text not null,
 	mac_address text not null,
 	ip text,
 	host_name text
-);
+	);
