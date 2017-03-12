@@ -2,7 +2,7 @@ import unittest
 import wifi_occupancy_sensor
 from flask import Flask
 
-class wifi_occupancy_sensor_tests(unittest.TestCase):
+class ViewsTest(unittest.TestCase):
     def setUp(self):
         self.app = wifi_occupancy_sensor.app.test_client()
 

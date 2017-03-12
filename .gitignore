@@ -1,3 +1,4 @@
 dist/
 build/
 *.pyc
+wifi_occupancy_sensor.sqlite
