@@ -48,6 +48,10 @@ def init_db():
             db.execute(f.read())
             f.close()
 
+        with app.open_resoucre('schema/mview_present_mac.sql','r') as f:
+            db.execute(f.read())
+            f.close()
+
 def make_dicts(cursor, row):
     return dict((cursor.description[idx][0], value)
         for idx, value in enumerate(row))
