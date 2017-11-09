@@ -40,15 +40,15 @@ def close_connection(exception):
 def init_db():
     with app.app_context():
         db = get_db()
-        with app.open_resoucre('schema/dhcp_log.sql','r') as f:
+        with app.open_resource('schema/dhcp_log.sql','r') as f:
             db.execute(f.read())
             f.close()
 
-        with app.open_resoucre('schema/mac_activity.sql','r') as f:
+        with app.open_resource('schema/mac_activity.sql','r') as f:
             db.execute(f.read())
             f.close()
 
-        with app.open_resoucre('schema/mview_present_mac.sql','r') as f:
+        with app.open_resource('schema/mview_present_mac.sql','r') as f:
             db.execute(f.read())
             f.close()
 
