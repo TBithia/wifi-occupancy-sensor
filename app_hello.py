@@ -1,4 +1,4 @@
-from flask import Flask, g
+from flask import Flask, g,render_template
 import sqlite3
 import os
 
@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def hello():
-    return "hello"
+    return render_template('network_display.html')
 
 @app.route('/bye')
 def bye():

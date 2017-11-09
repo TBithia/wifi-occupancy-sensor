@@ -1,0 +1,10 @@
+body {
+    background-color: #BDBDBD;
+} 
+table, th, td {
+    border: 1px solid black;
+    background-color: #F2F2F2;
+}
+#occupantTable {
+	background-color: #F2F2F2;
+}
