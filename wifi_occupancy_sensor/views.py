@@ -1,7 +1,7 @@
 from wifi_occupancy_sensor import app
-import controllers
+from wifi_occupancy_sensor import controllers
 
-from flask import Response
+from flask import Response, Flask, g,render_template
 from functools import wraps
 import json
 import logging
@@ -42,10 +42,8 @@ def json_exception(func):
 
 @app.route('/')
 def hello():
-    '''
-    Say hello, to show that the server is up and running.
-    '''
-    return 'Hello, World!'
+    leases = controllers.list_active_devices()
+    return render_template('network_display.html',leases = leases)
 
 
 @app.route('/occupancy')

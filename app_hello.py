@@ -1,9 +1,9 @@
-from flask import Flask, g,render_template
 import sqlite3
 import os
 
+from wifi_occupancy_sensor import app
 
-app = Flask(__name__)
+"""app = Flask(__name__)
 
 @app.route('/')
 def hello():
@@ -61,7 +61,7 @@ if not os.path.isfile(DATABASE):
     init_db()
         
 
-
+"""
 
 if __name__ == "__main__":
     app.run()
