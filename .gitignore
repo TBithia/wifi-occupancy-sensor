@@ -3,3 +3,7 @@ build/
 __pycache__/
 *.pyc
 *.sqlite
+*.db
+venv/
+# symlinked the package into the test dir to enable testing without install
+wifi_occupancy_sensor/tests/wifi_occupancy_sensor
