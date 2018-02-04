@@ -1,99 +1,175 @@
 
-import os
-import sqlite3
+import logging
+
+from sqlalchemy import and_, create_engine, Column, Integer, ForeignKey, or_
+from sqlalchemy.ext.declarative import declared_attr, declarative_base
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import exists
 
 
-def get_table(table_class, config):
-    db = DB(config.DATABASE_FILENAME)
-    return table_class(db)
+Model = declarative_base()  # pylint: disable=invalid-name
+
+def connector(file_uri, helper):
+    engine = create_engine(
+        file_uri,
+        echo=logging.getLogger().level == logging.DEBUG
+    )
+    Model.metadata.create_all(engine)
+    session = Session(bind=engine, autocommit=True, autoflush=False)
+    return helper(session)
 
 
-def _make_dict(cursor, row):
-    return {cursor.description[idx][0]: value for idx, value in enumerate(row)}
+class Helper:
+
+    datatype = None
+
+    def __init__(self, db_session, datatype=None):
+        self.log = logging.getLogger(name=self.__class__.__name__)
+        self._session = db_session
+        self.datatype = datatype or self.datatype
+
+    def flush(self):
+        if self._session.dirty:
+            self._session.flush()
+
+    def query(self, *args, **kwargs):
+        return self._session.query(*args, **kwargs)
+
+    def find(self, **attrs):
+        return self._session.query(self.datatype).filter_by(**attrs).one_or_none()
+
+    def find_all(self, **attrs):
+        return self._session.query(self.datatype).filter_by(**attrs).all()
+
+    def update(self, **spec):
+        """UPSERT"""
+        spec = {key: value for key, value in spec.items() if value is not None}
+        query = self.query(self.datatype)
+        found = query.filter(self.datatype.id == spec.get('id')).one_or_none()
+        if found:
+            found.update(spec)
+            return found
+        else:
+            return self.add(**spec)
+
+    def add(self, **spec):
+        data = self._session.merge(self.datatype(id=spec.get('id')))
+        data.update(**spec)
+        self._session.add(data)
+        return data
+
+    def remove(self, data):
+        if isinstance(data, int):
+            # data is a record id
+            found = self.find(id=data)
+            if found:
+                self._session.delete(found)
+        else:
+            # data must be an instance of self.datatype
+            self._session.delete(data)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self._session.flush()
+        self._session.close()
+        return False
+
+    def __contains__(self, url):
+        condition = exists().where(self.datatype.url == url)
+        found = self._session.query(self.datatype.url).filter(condition)
+        if found:
+            return True
+        return False
+
+    def __iter__(self):
+        self._session.commit()
+        self.log.debug('Dumping db to a list.')
+        return iter(self._session.query(self.datatype).all())
 
 
-def _where(where):
-    where_parts = []
-    values = []
-    for key, value in where.items():
-        where_parts.append('%s=?' % key)
-        values.append(value)
-    return ','.join(where_parts), values
+class ItemMixin:
 
+    item_id = Column(Integer, primary_key=True, unique=True)
+    # potentially automatically cast the value via the proxy
+    # hydrate_type = Column(Enum)
 
-class DB:
+    @declared_attr
+    def dict_key(cls):  # pylint: disable=no-self-argument, method-hidden
+        return Column(cls.key_type)
 
-    def __init__(self, config, *tables):
-        self._filename = config.get('DATABASE_FILENAME')
-        init_db = not os.path.isfile(self._filename)
-        self._conn = sqlite3.connect(self._filename)
-        self._conn.row_factory = _make_dict
-        if init_db:
-            for table in tables:
-                self.load(table.schema)
+    @declared_attr
+    def value(cls):  # pylint: disable=no-self-argument, method-hidden
+        return Column(cls.value_type)
 
-    def load(self, schema):
-        self._conn.execute(schema)
-
-    def close(self):
-        if self._conn:
-            self._conn.close()
-
-    def insert(self, table, row_dict):
-        columns = list(row_dict.items())
-        columns.sort(key=lambda x: x[0])
-        keys = [x[0] for x in columns]
-        values = [x[1] for x in columns]
-        value_format = ','.join(['?'] * len(keys))
-        key_format = ','.join(keys)
-        query = 'INSERT OR REPLACE INTO %s(%s) VALUES(%s)' % (
-            table, key_format, value_format
+    @declared_attr
+    def parent_id(cls):  # pylint: disable=no-self-argument
+        return Column(
+            Integer,
+            ForeignKey(cls.parent_id_column),
+            nullable=False
         )
-        self._conn.execute(query, values)
 
-    def select(self, table, **where):
-        query_parts = ['SELECT * FROM %s' % table]
-        keys, values = _where(where)
-        if keys:
-            query_parts.append('WHERE')
-            query_parts.append(keys)
-        query = ' '.join(query_parts)
-        return self._conn.execute(query, values).fetchall()
-
-    def pick(self, table, where_string, *values):
-        query = 'SELECT * FROM %s WHERE %s' % (table, where_string)
-        return self._conn.execute(query, values).fetchall()
-
-    def delete(self, table, **where):
-        if not where:
-            raise TypeError()
-        query = 'DELETE FROM %s WHERE ' %  table
-        keys, values = _where(where)
-        self._conn.execute(query+keys, values)
+    def __init__(self, key, value):
+        print('item mixin', key, value)
+        self.dict_key = key
+        self.value = value
 
 
-class Table:
+class DictProxy:
 
-    name = None
-    record_class = None
-    schema = 'CREATE TABLE IF NOT EXISTS %s ( %s )'
+    keyname = 'dict_key'
+    childclass = object
 
-    def __init__(self, db):
-        self.db = db
-        self.db.load(self.schema)
+    def __init__(self, parent, collection_name):
+        self.parent = parent
+        self.collection_name = collection_name
+        self.collection.autoflush(True)
+        print(self.collection.autoflush)
 
-    def get(self, **where):
-        records = self.db.select(self.name, **where)
-        return [self.record_class(**record) for record in records]
+    @property
+    def collection(self):
+        return getattr(self.parent, self.collection_name)
 
-    def pick(self, where_string, *values):
-        return self.db.pick(self.name, where_string, *values)
+    def keys(self):
+        descriptor = getattr(self.childclass, self.keyname)
+        return [x[0] for x in self.collection.values(descriptor)]
 
-    def update(self, records):
-        for record in records:
-            self.db.insert(self.name, **dict(record))
+    def __getitem__(self, key):
+        item = self.collection.filter_by(**{self.keyname:key}).first()
+        if item:
+            return item.value
+        else:
+            raise KeyError(key)
 
-    def pop(self, **where):
-        records = self.get(**where)
-        self.db.delete(**where)
-        return records
+    def __setitem__(self, key, value):
+        try:
+            existing = self.collection.filter_by(**{self.keyname:key}).first()
+            self.collection.remove(existing)
+        except KeyError:
+            pass
+        if not isinstance(value, self.childclass):
+            value = self.childclass(key, value)
+        self.collection.append(value)
+        print(self.collection.all())
+
+    def pop(self, key):
+        dict_item = self[key]
+        value = dict_item.value
+        self.collection.remove(dict_item)
+        return value
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def update(self, new_dict):
+        for key, value in new_dict.items():
+            if key and value:
+                self[key] = value
+
+    def __iter__(self):
+        return iter(tuple((x.key, x.value) for x in self.collection))
