@@ -20,19 +20,31 @@ Notes:
 
 """
 
-
+import datetime
 import logging
 import os
 import sys
 
-from wifi_occupancy_sensor.controllers import leases, database
+from wifi_occupancy_sensor.controllers import connector
+from wifi_occupancy_sensor.models.devices import Devices
+
 
 # this can be set in the enviroment of the dnsmasq process
 CONFIG = __import__(os.environ['WIFI_OCCUPANCY_SENSOR_CONFIGFILE'])
 
 
-def _dnsmasq_callback():
-    lease_db = database.get_table(leases.get_leases(CONFIG), CONFIG)
+def adjust_to_utc(timestamp):
+    local_time = datetime.datetime.fromtimestamp(timestamp)
+    dumby_utc_time = datetime.datetime.utcfromtimestamp(timestamp)
+    utcoffset = local_time - dumby_utc_time
+    return local_time + utcoffset
+
+
+def dnsmasq_callback():
+    devices = connector(
+        CONFIG.get('SQLALCHEMY_DATABASE_URI'),
+        Devices
+    )
     action = sys.argv[1]
     if action not in ('add', 'old', 'del'):
         logger.debug('dnsmasq_callback: sys.argv = %s', sys.argv)
@@ -45,20 +57,17 @@ def _dnsmasq_callback():
     mac_address = sys.argv[2]
     ip_address = sys.argv[3]
     hostname = sys.argv[4]
-    exp_ts = os.environ['DNSMASQ_LEASE_EXPIRES']
-    func = {
-        'add': lease_db.update,
-        'del': lease_db.pop,
-        'old': lease_db.update
-        }.get(action)
-    func(
-        exp_ts=exp_ts,
-        mac_address=mac_address,
-        ip_address=ip_address,
-        hostname=hostname
+    expire_timestamp = os.environ['DNSMASQ_LEASE_EXPIRES']
+    device = devices.update(
+        id=mac_address,
+        expire_time=adjust_to_utc(expire_timestamp),
+        address=ip_address,
+        name=hostname
     )
+    if action == 'del':
+        device.presence_end = datetime.datetime.utcnow()
 
 
 if __name__ == '__main__':
     logger = logging.getLogger(name='wifi-occupancy-sensor-dnsmasq-callback') #  pylint: disable=invalid-name
-    _dnsmasq_callback()
+    dnsmasq_callback()
