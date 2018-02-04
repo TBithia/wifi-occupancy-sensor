@@ -37,7 +37,7 @@ ALL_DEVICES_RESULT = [
      'presence_start': 0}
 ]
 
-PRESENT_DEVICES_RESULT = [{'name': 'example-name', 'user_id': 0, 'expire_time': expire_time, 'id': '00:00:00:00:00:00', 'presence_start': start_time, 'address': '1.2.3.4', 'presence_end': end_time}]
+PRESENT_DEVICES_RESULT = [{'name': 'example-name', 'expire_time': expire_time, 'id': '00:00:00:00:00:00', 'presence_start': start_time, 'address': '1.2.3.4', 'presence_end': end_time, 'device_metadata': {}}]
 
 
 class ViewsTest(unittest.TestCase):
