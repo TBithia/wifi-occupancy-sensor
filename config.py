@@ -1,3 +1,4 @@
 
-#DATABASE_FILENAME = 'wifi_occupancy_sensor.sqlite'
-DATABASE_FILENAME = 'testing.sqlite'
+
+SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/test.db'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
