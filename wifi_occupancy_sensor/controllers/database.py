@@ -9,15 +9,6 @@ from sqlalchemy.sql import exists
 
 Model = declarative_base()  # pylint: disable=invalid-name
 
-def connector(file_uri, helper):
-    engine = create_engine(
-        file_uri,
-        echo=logging.getLogger().level == logging.DEBUG
-    )
-    Model.metadata.create_all(engine)
-    session = Session(bind=engine, autocommit=True, autoflush=False)
-    return helper(session)
-
 
 class Helper:
 
@@ -112,7 +103,6 @@ class ItemMixin:
         )
 
     def __init__(self, key, value):
-        print('item mixin', key, value)
         self.dict_key = key
         self.value = value
 
@@ -126,7 +116,6 @@ class DictProxy:
         self.parent = parent
         self.collection_name = collection_name
         self.collection.autoflush(True)
-        print(self.collection.autoflush)
 
     @property
     def collection(self):
@@ -136,23 +125,25 @@ class DictProxy:
         descriptor = getattr(self.childclass, self.keyname)
         return [x[0] for x in self.collection.values(descriptor)]
 
-    def __getitem__(self, key):
+    def __get_raw_item(self, key):
         item = self.collection.filter_by(**{self.keyname:key}).first()
         if item:
-            return item.value
+            return item
         else:
             raise KeyError(key)
 
+    def __getitem__(self, key):
+        return self.__get_raw_item(key).value
+
     def __setitem__(self, key, value):
         try:
-            existing = self.collection.filter_by(**{self.keyname:key}).first()
+            existing = self.__get_raw_item(key)
             self.collection.remove(existing)
         except KeyError:
             pass
         if not isinstance(value, self.childclass):
             value = self.childclass(key, value)
         self.collection.append(value)
-        print(self.collection.all())
 
     def pop(self, key):
         dict_item = self[key]
