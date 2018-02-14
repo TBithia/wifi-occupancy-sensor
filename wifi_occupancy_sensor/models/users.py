@@ -25,11 +25,6 @@ class User(database.Model):
 
     id = Column(Integer, primary_key=True)
     name = Column(Text, unique=True)
-    # potentially timeout if the user is MIA or partially MIA
-    # expire_time = Column(DateTime)
-    presence_start = Column(DateTime)
-    presence_end = Column(DateTime)
-    # potentially record the reason for the timeout (ala expire_time)
     devices = relationship(
         'Device',
         cascade='all, delete-orphan'
@@ -53,8 +48,6 @@ class User(database.Model):
         return iter((
             ('id', self.id),
             ('name', self.name),
-            ('presence_start', self.presence_start),
-            ('presence_end', self.presence_end),
             ('devices', list(self.devices or [])),
             ('settings', dict(self.settings or {}))
         ))

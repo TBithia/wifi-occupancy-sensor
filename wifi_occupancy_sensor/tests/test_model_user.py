@@ -14,8 +14,6 @@ TEST_ITER_OUTPUT = {
     'devices': [],
     'id': TEST_ID,
     'name': TEST_USER_NAME,
-    'presence_start': TEST_PRESENCE_START,
-    'presence_end': TEST_PRESENCE_END,
     'settings': TEST_SETTINGS_DICT
 }
 
@@ -43,8 +41,6 @@ class TestUser(unittest.TestCase):
                 id=TEST_ID,
                 name=TEST_USER_NAME,
                 settings=TEST_SETTINGS_DICT,
-                presence_start=TEST_PRESENCE_START,
-                presence_end=TEST_PRESENCE_END
             )
             db.session.commit()  # pylint: disable=no-member
 
