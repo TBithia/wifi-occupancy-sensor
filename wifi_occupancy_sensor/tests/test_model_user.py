@@ -9,13 +9,16 @@ from wifi_occupancy_sensor.models.users import User
 TEST_ID = 0
 TEST_USER_NAME = 'Alice'
 TEST_SETTINGS_DICT = {'option0': 'value0', 'option1': 'value1'}
-TEST_PRESENCE_START = TEST_PRESENCE_END = datetime.datetime.fromtimestamp(0)
+TEST_PRESENCE_START = TEST_PRESENCE_END = datetime.datetime.fromtimestamp(1)
 TEST_ITER_OUTPUT = {
     'devices': [],
     'id': TEST_ID,
     'name': TEST_USER_NAME,
+    'presence_start': TEST_PRESENCE_START,
+    'presence_end': TEST_PRESENCE_END,
     'settings': TEST_SETTINGS_DICT
 }
+
 
 class TEST_CONFIG:
     SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/test.db'
@@ -33,18 +36,17 @@ class TestUser(unittest.TestCase):
         """
         app.config.from_object(TEST_CONFIG)
         with app.app_context():
-            db.session.close()
+            db.session.close()  # pylint: disable=no-member
             db.drop_all()
             db.create_all()
             users.update(
                 id=TEST_ID,
                 name=TEST_USER_NAME,
                 settings=TEST_SETTINGS_DICT,
-                # these are straight sqlalchemy Column objects
                 presence_start=TEST_PRESENCE_START,
                 presence_end=TEST_PRESENCE_END
             )
-            db.session.commit()
+            db.session.commit()  # pylint: disable=no-member
 
     def test_update_all_set(self):
         with app.app_context():
@@ -66,4 +68,4 @@ class TestUser(unittest.TestCase):
         """
         with app.app_context():
             db.drop_all()
-            db.session.commit()
+            db.session.commit()  # pylint: disable=no-member

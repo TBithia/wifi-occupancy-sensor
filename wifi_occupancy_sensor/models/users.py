@@ -53,6 +53,8 @@ class User(database.Model):
         return iter((
             ('id', self.id),
             ('name', self.name),
+            ('presence_start', self.presence_start),
+            ('presence_end', self.presence_end),
             ('devices', list(self.devices or [])),
             ('settings', dict(self.settings or {}))
         ))
