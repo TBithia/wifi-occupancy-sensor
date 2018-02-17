@@ -40,14 +40,15 @@ class User(database.Model):
     def settings(self):
         return UserSettings(self, '_settings')
 
-    def update(self, **spec):
+    def update(self, spec):
         self.name = spec.get('name', self.name)
+        self.devices.extend(spec.get('devices', []))
         self.settings.update(spec.get('settings', {}))
 
     def __iter__(self):
         return iter((
             ('id', self.id),
             ('name', self.name),
-            ('devices', list(self.devices or [])),
+            ('devices', [dict(x) for x in self.devices or []]),
             ('settings', dict(self.settings or {}))
         ))

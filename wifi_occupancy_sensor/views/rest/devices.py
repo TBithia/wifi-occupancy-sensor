@@ -34,7 +34,7 @@ class Devices(Resource):
                 return dict(device)
             else:
                 abort(400, message='"%s" is not an existing device.' %
-                      device_id)
+                      args.id)
         elif args.active is True:
             active_devices = devices.active
             app.logger.debug(active_devices)

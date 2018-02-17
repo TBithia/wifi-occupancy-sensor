@@ -1,14 +1,18 @@
+"""
 
+Implementation Notes:
+- SQLite doesn't support timezones the way SQLAlchemy handles the DateTime
+datatype. Normalizing to UTC doesn't work if the system time is not in UTC.
+
+"""
 import logging
 
 from sqlalchemy import and_, create_engine, Column, Integer, ForeignKey, or_
 from sqlalchemy.ext.declarative import declared_attr, declarative_base
-from sqlalchemy.orm import Session
 from sqlalchemy.sql import exists
 
 
 Model = declarative_base()  # pylint: disable=invalid-name
-
 
 class Helper:
 
@@ -45,7 +49,7 @@ class Helper:
 
     def add(self, **spec):
         data = self._session.merge(self.datatype(id=spec.get('id')))
-        data.update(**spec)
+        data.update(spec)
         self._session.add(data)
         return data
 

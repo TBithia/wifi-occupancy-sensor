@@ -1,25 +1,28 @@
 
 import datetime
+import os
 import unittest
 
 from wifi_occupancy_sensor import app, db, users
 
 from wifi_occupancy_sensor.models.users import User
+from wifi_occupancy_sensor.tests.testdata import TEST_CONFIG
 
-TEST_ID = 0
-TEST_USER_NAME = 'Alice'
-TEST_SETTINGS_DICT = {'option0': 'value0', 'option1': 'value1'}
-TEST_PRESENCE_START = TEST_PRESENCE_END = datetime.datetime.fromtimestamp(1)
-TEST_ITER_OUTPUT = {
+
+# pylint: disable=line-too-long
+
+ALICE_ID = 0
+ALICE_USER_NAME = 'Alice'
+ALICE_SETTINGS_DICT = {'option0': 'value0', 'option1': 'value1'}
+ALICE_DICT = {
     'devices': [],
-    'id': TEST_ID,
-    'name': TEST_USER_NAME,
-    'settings': TEST_SETTINGS_DICT
+    'id': 0,
+    'name': 'Alice',
+    'settings': {'option0': 'value0', 'option1': 'value1'}
 }
 
-
-class TEST_CONFIG:
-    SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/test.db'
+UPDATED_SETTINGS_DICT = {'option0': 'value10', 'option1': 'value11'}
+UPDATED_USER_NAME = 'Eve'
 
 
 class TestUser(unittest.TestCase):
@@ -32,31 +35,42 @@ class TestUser(unittest.TestCase):
         """
         Creates a new database for the unit test to use
         """
-        app.config.from_object(TEST_CONFIG)
         with app.app_context():
             db.session.close()  # pylint: disable=no-member
             db.drop_all()
             db.create_all()
-            users.update(
-                id=TEST_ID,
-                name=TEST_USER_NAME,
-                settings=TEST_SETTINGS_DICT,
+            alice = users.update(
+                id=0,
+                name='Alice',
+                settings={ 'option0': 'value0', 'option1': 'value1' }
             )
             db.session.commit()  # pylint: disable=no-member
 
-    def test_update_all_set(self):
+    def test_all_set(self):
         with app.app_context():
             user = users.query(User).one_or_none()
-            user.update(name=TEST_USER_NAME, settings=TEST_SETTINGS_DICT)
-            reread_user = users.query(User).filter_by(id=TEST_ID).one_or_none()
+            self.assertEqual(user.id, ALICE_ID)
+            self.assertEqual(user.name, ALICE_USER_NAME)
+            self.assertEqual(dict(user.settings), ALICE_SETTINGS_DICT)
+
+    def test_update_all(self):
+        with app.app_context():
+            user = users.query(User).one_or_none()
+            user.update({'name': UPDATED_USER_NAME, 'settings': UPDATED_SETTINGS_DICT})
+            self.assertEqual(user.name, UPDATED_USER_NAME)
+            self.assertEqual(dict(user.settings), UPDATED_SETTINGS_DICT)
+
+    def test_update_all_reread(self):
+        with app.app_context():
+            user = users.query(User).one_or_none()
+            user.update({'name': UPDATED_USER_NAME, 'settings': UPDATED_SETTINGS_DICT})
+            reread_user = users.query(User).filter_by(id=ALICE_ID).one_or_none()
             self.assertEqual(user, reread_user)
-            self.assertEqual(user.name, TEST_USER_NAME)
-            self.assertEqual(dict(user.settings), TEST_SETTINGS_DICT)
 
     def test_iter(self):
         with app.app_context():
-            user = users.query(User).filter_by(id=TEST_ID).one_or_none()
-            self.assertEqual(dict(user), TEST_ITER_OUTPUT)
+            user = users.query(User).filter_by(id=ALICE_ID).one_or_none()
+            self.assertEqual(dict(user), ALICE_DICT)
 
     def tearDown(self):
         """
@@ -65,3 +79,8 @@ class TestUser(unittest.TestCase):
         with app.app_context():
             db.drop_all()
             db.session.commit()  # pylint: disable=no-member
+
+
+if __name__ == '__main__':
+    unittest.main()
+

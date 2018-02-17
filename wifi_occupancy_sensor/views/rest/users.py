@@ -22,7 +22,7 @@ class Users(Resource):
             return [dict(x) for x in users.find_all()]
         user = users.find(id=args.id)
         if not user:
-            abort(404, 'User not found')
+            abort(404, message='User not found')
         return dict(user)
 
     def post(self):

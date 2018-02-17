@@ -21,13 +21,10 @@ Notes:
 """
 
 import datetime
+import json
 import logging
 import os
 import sys
-
-from wifi_occupancy_sensor.controllers import connector
-from wifi_occupancy_sensor.models.devices import Devices
-
 
 # this can be set in the enviroment of the dnsmasq process
 CONFIG = __import__(os.environ['WIFI_OCCUPANCY_SENSOR_CONFIGFILE'])
@@ -40,11 +37,34 @@ def adjust_to_utc(timestamp):
     return local_time + utcoffset
 
 
+class Device:
+
+    def __init__(self, mac_address, ip_address, hostname, expire_timestamp):
+        self.mac_address = mac_address
+        self.ip_address = ip_address
+        self.hostname = hostname
+        self.expire_timestamp = expire_timestamp
+        self.presence_end = None
+
+    def delete(self):
+        self.presence_end = datetime.datetime.utcnow()
+
+    def encode(self):
+        return json.dumps({
+            'mac_address': self.mac_address,
+            'ip_address': self.ip_address,
+            'hostname': self.hostname,
+            'expire_timestamp': self.expire_timestamp,
+            'presence_end': self.presence_end
+        }).encode()
+
+
+def signal(device):
+    """Send the device info somewhere."""
+    pass
+
+
 def dnsmasq_callback():
-    devices = connector(
-        CONFIG.get('SQLALCHEMY_DATABASE_URI'),
-        Devices
-    )
     action = sys.argv[1]
     if action not in ('add', 'old', 'del'):
         logger.debug('dnsmasq_callback: sys.argv = %s', sys.argv)
@@ -54,18 +74,10 @@ def dnsmasq_callback():
         }
         logger.debug('dnsmasq_callback: selected os.environ = %s', selections)
         return None
-    mac_address = sys.argv[2]
-    ip_address = sys.argv[3]
-    hostname = sys.argv[4]
-    expire_timestamp = os.environ['DNSMASQ_LEASE_EXPIRES']
-    device = devices.update(
-        id=mac_address,
-        expire_time=adjust_to_utc(expire_timestamp),
-        address=ip_address,
-        name=hostname
-    )
+    device = Device(sys.argv[2], sys.argv[3], sys.argv[4], os.environ['DNSMASQ_LEASE_EXPIRES'])
     if action == 'del':
-        device.presence_end = datetime.datetime.utcnow()
+        device.delete()
+    signal(device)
 
 
 if __name__ == '__main__':
